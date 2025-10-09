@@ -7,6 +7,7 @@ from aidial_client.types.chat.legacy.chat_completion import CustomContent, ToolC
 from aidial_sdk.chat_completion import Message, Role, Choice, Request, Response
 
 from task.tools.base import BaseTool
+from task.tools.models import ToolCallParams
 from task.utils.constants import TOOL_CALL_HISTORY_KEY
 from task.utils.history import unpack_messages
 from task.utils.stage import StageProcessor
@@ -17,13 +18,11 @@ class LLMAgent:
     def __init__(
             self,
             endpoint: str,
-            api_version: str,
             system_prompt: str,
             request: Request,
             tools: list[BaseTool],
     ):
         self.endpoint = endpoint
-        self.api_version = api_version
         self.system_prompt = system_prompt
         self.request = request
         self.tools = tools
@@ -36,12 +35,12 @@ class LLMAgent:
         }
 
     async def handle_request(
-            self, choice: Choice, deployment_name: str, response: Response, api_key: str, **kwargs
-    ) -> Message:
+            self, deployment_name: str, choice: Choice, request: Request, response: Response) -> Message:
+        api_key = request.api_key
+
         client: AsyncDial = AsyncDial(
             base_url=self.endpoint,
             api_key=api_key,
-            api_version=self.api_version,
         )
 
         chunks = await client.chat.completions.create(
@@ -84,15 +83,21 @@ class LLMAgent:
                     tool_call=tool_call,
                     choice=choice,
                     api_key=api_key,
+                    conversation_id=request.headers['x-conversation-id']
                 )
                 for tool_call in assistant_message.tool_calls
             ]
             tool_messages = await asyncio.gather(*tasks)
 
-            self.state[TOOL_CALL_HISTORY_KEY].append(assistant_message.dict())
+            self.state[TOOL_CALL_HISTORY_KEY].append(assistant_message.dict(exclude_none=True))
             self.state[TOOL_CALL_HISTORY_KEY].extend(tool_messages)
 
-            return await self.handle_request(choice, deployment_name, response, api_key, **kwargs)
+            return await self.handle_request(
+                deployment_name=deployment_name,
+                choice=choice,
+                request=request,
+                response=response
+            )
 
         choice.set_state(self.state)
 
@@ -116,24 +121,32 @@ class LLMAgent:
 
         return unpacked_messages
 
-    async def _process_tool_call(self, tool_call: ToolCall, choice: Choice, api_key: str) -> dict[str, Any]:
+    async def _process_tool_call(self, tool_call: ToolCall, choice: Choice, api_key: str, conversation_id: str) -> dict[
+        str, Any]:
         tool_name = tool_call.function.name
         stage = StageProcessor.open_stage(
             choice,
             tool_name
         )
-        stage.append_content("## Request arguments: \n")
-        stage.append_content(f"```json\n\r{json.dumps(json.loads(tool_call.function.arguments), indent=2)}\n\r```\n\r")
-        stage.append_content("## Response: \n")
 
         tool = self._tools_dict[tool_name]
+
+        if tool.show_in_stage:
+            stage.append_content("## Request arguments: \n")
+            stage.append_content(
+                f"```json\n\r{json.dumps(json.loads(tool_call.function.arguments), indent=2)}\n\r```\n\r")
+            stage.append_content("## Response: \n")
+
         tool_message = await tool.execute(
-            tool_call=tool_call,
-            stage=stage,
-            choice=choice,
-            api_key=api_key
+            ToolCallParams(
+                tool_call=tool_call,
+                stage=stage,
+                choice=choice,
+                api_key=api_key,
+                conversation_id=conversation_id
+            )
         )
 
         StageProcessor.close_stage_safely(stage)
 
-        return tool_message.dict()
+        return tool_message.dict(exclude_none=True)

@@ -3,18 +3,17 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from aidial_client import AsyncDial
+from aidial_sdk.chat_completion import Message, Role, CustomContent
 from pydantic import StrictStr
 
 from task.tools.base import BaseTool
-
-from aidial_sdk.chat_completion import Stage, Message, Role, ToolCall, CustomContent, Choice
+from task.tools.models import ToolCallParams
 
 
 class DeploymentTool(BaseTool, ABC):
 
-    def __init__(self, endpoint: str, api_version: str, ):
+    def __init__(self, endpoint: str):
         self.endpoint = endpoint
-        self.api_version = api_version
 
     @property
     @abstractmethod
@@ -25,14 +24,13 @@ class DeploymentTool(BaseTool, ABC):
     def tool_parameters(self) -> dict[str, Any]:
         return {}
 
-    async def execute(self, tool_call: ToolCall, stage: Stage, choice: Choice, api_key: str) -> Message:
+    async def _execute(self, tool_call_params: ToolCallParams) -> str | Message:
         client: AsyncDial = AsyncDial(
             base_url=self.endpoint,
-            api_key=api_key,
-            api_version=self.api_version,
+            api_key=tool_call_params.api_key,
         )
 
-        arguments = json.loads(tool_call.function.arguments)
+        arguments = json.loads(tool_call_params.tool_call.function.arguments)
         prompt = arguments.get("prompt")
         del arguments["prompt"]
         chunks = await client.chat.completions.create(
@@ -54,14 +52,14 @@ class DeploymentTool(BaseTool, ABC):
                 delta = chunk.choices[0].delta
                 if delta:
                     if delta.content:
-                        stage.append_content(delta.content)
+                        tool_call_params.stage.append_content(delta.content)
                         content += delta.content
                     if delta.custom_content and delta.custom_content.attachments:
                         attachments = delta.custom_content.attachments
                         custom_content.attachments.extend(attachments)
 
                         for attachment in attachments:
-                            stage.add_attachment(
+                            tool_call_params.stage.add_attachment(
                                 type=attachment.type,
                                 title=attachment.title,
                                 data=attachment.data,
@@ -74,5 +72,5 @@ class DeploymentTool(BaseTool, ABC):
             role=Role.TOOL,
             content=StrictStr(content),
             custom_content=custom_content,
-            tool_call_id=StrictStr(tool_call.id),
+            tool_call_id=StrictStr(tool_call_params.tool_call.id),
         )
