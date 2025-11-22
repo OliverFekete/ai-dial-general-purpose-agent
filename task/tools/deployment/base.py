@@ -30,7 +30,7 @@ class DeploymentTool(BaseTool, ABC):
         # 2. Get `prompt` from arguments (by default we provide `prompt` for each deployment tool, use this param name as standard)
         # 3. Delete `prompt` from `arguments` (there can be provided additional parameters and `prompt` will be added
         #    as user message content and other parameters as `custom_fields`)
-        # 4. Create AsyncDial client
+        # 4. Create AsyncDial client (api_version is 2025-01-01-preview)
         # 5. Call chat completions with:
         #   - messages (here will be just user message. Optionally, in this class you can add system prompt `property`
         #     and if any deployment tool provides system prompt then we need to set it as first message (system prompt))

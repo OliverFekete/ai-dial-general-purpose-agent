@@ -31,7 +31,7 @@ class GeneralPurposeAgent:
 
     async def handle_request(self, deployment_name: str, choice: Choice, request: Request, response: Response) -> Message:
         #TODO:
-        # 1. Create AsyncDial, don't forget to provide endpoint as base_url and api_key. Api_key you can take from `request`.
+        # 1. Create AsyncDial, don't forget to provide endpoint as base_url and api_key. Api_key you can take from `request` as well as api_version
         #    JFI: while request you will get Per-request API key (not `dial_api_key` configured in Core config). Read
         #    more about it -> https://docs.dialx.ai/platform/core/per-request-keys
         # 2. Create `chunks` with created AsyncDial client (chat -> completions -> create). Provide it with:
