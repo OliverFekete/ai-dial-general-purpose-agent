@@ -7,6 +7,8 @@
 - File Content Extractor (Extract content from file (PDF, TXT, CSV). Supports basic pagination)
 - RAG Search (Makes RAG search. Indexed files preserve during conversation in Cache)
 
+## AFTER ALL THE TASKS DONE - DON'T FORGET TO REMOVE API KEYs FROM core/config.json
+
 ## Flow
 <img src="agent_flow.png">
 
