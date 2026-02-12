@@ -143,14 +143,14 @@ Flow: <img src="py_interpreter_flow.png">
 **Multi-model**
 
 DIAL Platform provides users with Unified API to work with different models. Let's add Anthropic Sonnet model as orchestration model:
-1. Add to [DIAL core config](core/config.json) claude-sonnet-3-7:
-    - Key is `claude-sonnet-3-7` with such configurations:
-        - displayName = `Claude Sonnet 3.7`
-        - endpoint = `http://adapter-dial:5000/openai/deployments/claude-sonnet-3-7/chat/completions`
+1. Add to [DIAL core config](core/config.json) claude-haiku-4-5:
+    - Key is `claude-haiku-4-5` with such configurations:
+        - displayName = `Claude Sonnet 4.5`
+        - endpoint = `http://adapter-dial:5000/openai/deployments/claude-haiku-4-5/chat/completions`
         - iconUrl = `https://chat.lab.epam.com/themes/anthropic.svg`
         - type = `chat`
         - upstreams = array with dict of:
-        - endpoint = `https://ai-proxy.lab.epam.com/openai/deployments/claude-3-7-sonnet@20250219/chat/completions`
+        - endpoint = `https://ai-proxy.lab.epam.com/openai/deployments/anthropic.claude-haiku-4-5-20251001-v1:0/chat/completions`
         - key = {YOUR_DIAL_API_KEY}
 2. Change Orchestration model in [app.py](task/app.py)
 3. Restart [docker-compose](docker-compose.yml)
